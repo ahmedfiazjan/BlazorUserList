@@ -1,0 +1,264 @@
+@page "/"
+
+<PageTitle>Users</PageTitle>
+
+<div class="container mx-auto px-4 py-8">
+    <!-- Header Section -->
+    <div class="mb-4">
+        <!-- Row 1: Search & Controls -->
+        <div class="filter-top-row">
+            <!-- Search -->
+            <div class="search-container">
+                <span class="search-icon">🔍</span>
+                <input type="text"
+                       class="search-input"
+                       placeholder="Search..."
+                       @bind="_globalSearch"
+                       @bind:event="oninput"
+                       @bind:after="OnSearchChangedAsync"/>
+            </div>
+
+            <!-- Filter Count -->
+            <div class="filter-count-badge">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+                <span>Filters (@ActiveFilterCount)</span>
+            </div>
+
+            <!-- Clear Filters -->
+            @if (ActiveFilterCount > 0)
+            {
+                <button class="clear-filters-btn" @onclick="ClearAllFilters">Clear filters</button>
+            }
+
+            <!-- Page Size (Right aligned) -->
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 0.5rem;">
+                <select class="px-2 py-1 border border-gray-300 rounded text-sm"
+                        @bind="_pageSize"
+                        @bind:after="OnPageSizeChangedAsync">
+                    <option value="8">8</option>
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Row 2: Filter Pills -->
+        <div class="filter-pills-row">
+            <!-- Full Name Pill -->
+            <div style="position: relative;">
+                <button class="filter-pill @(!string.IsNullOrEmpty(_filteredFullName) ? "active-blue" : "")" @onclick="ToggleFullNameDropdown">
+                    @if (!string.IsNullOrEmpty(_filteredFullName))
+                    {
+                        <span>Name: @_filteredFullName</span>
+                    }
+                    else
+                    {
+                        <span>Full Name</span>
+                    }
+                    <span class="text-xs @(!string.IsNullOrEmpty(_filteredFullName) ? "text-blue-300" : "text-gray-400")">▼</span>
+                </button>
+
+                @if (_fullNameDropdownOpen)
+                {
+                    <div class="pill-dropdown" style="padding: 0.75rem; width: 250px;">
+                        <input type="text"
+                               class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-indigo-500"
+                               placeholder="Filter by name..."
+                               value="@_filteredFullName"
+                               @oninput="OnFullNameChanged"
+                               autofocus/>
+                    </div>
+                }
+            </div>
+
+            <!-- Assigned Roles Pill -->
+            <div style="position: relative;">
+                <button class="filter-pill @(_selectedRoles.Any() ? "active-blue" : "")" @onclick="ToggleRoleDropdown">
+                    @if (_selectedRoles.Any())
+                    {
+                        <span>Assigned Roles: @_selectedRoles.Count</span>
+                    }
+                    else
+                    {
+                        <span>Assigned Roles</span>
+                    }
+                    <span class="text-xs @(_selectedRoles.Any() ? "text-blue-300" : "text-gray-400")">▼</span>
+                </button>
+
+                @if (_roleDropdownOpen)
+                {
+                    <div class="pill-dropdown" style="max-height: 300px; overflow-y: auto;">
+                        @foreach (var role in _availableRoles)
+                        {
+                            <button class="dropdown-item @(_selectedRoles.Contains(role) ? "selected" : "")"
+                                    @onclick="() => ToggleRole(role)">
+                                @role
+                                @if (_selectedRoles.Contains(role))
+                                {
+                                    <span style="margin-left: auto;">✓</span>
+                                }
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- License Type Pill -->
+            <div style="position: relative;">
+                <button class="filter-pill @(!string.IsNullOrEmpty(_selectedLicense) ? "active-blue" : "")" @onclick="ToggleLicenseDropdown">
+                    @if (!string.IsNullOrEmpty(_selectedLicense))
+                    {
+                        <span>License: @_selectedLicense</span>
+                    }
+                    else
+                    {
+                        <span>License Type</span>
+                    }
+                    <span class="text-xs @(!string.IsNullOrEmpty(_selectedLicense) ? "text-blue-300" : "text-gray-400")">▼</span>
+                </button>
+
+                @if (_licenseDropdownOpen)
+                {
+                    <div class="pill-dropdown">
+                        @foreach (var license in new[] { "Field Level", "Enterprise", "Professional" })
+                        {
+                            <button class="dropdown-item @(_selectedLicense == license ? "selected" : "")"
+                                    @onclick="() => SelectLicense(license)">
+                                @license
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Email Pill -->
+            <div style="position: relative;">
+                <button class="filter-pill @(!string.IsNullOrEmpty(_filteredEmail) ? "active-blue" : "")" @onclick="ToggleEmailDropdown">
+                    @if (!string.IsNullOrEmpty(_filteredEmail))
+                    {
+                        <span>Email: @_filteredEmail</span>
+                    }
+                    else
+                    {
+                        <span>Email</span>
+                    }
+                    <span class="text-xs @(!string.IsNullOrEmpty(_filteredEmail) ? "text-blue-300" : "text-gray-400")">▼</span>
+                </button>
+
+                @if (_emailDropdownOpen)
+                {
+                    <div class="pill-dropdown" style="padding: 0.75rem; width: 250px;">
+                        <input type="text"
+                               class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-indigo-500"
+                               placeholder="Filter by email..."
+                               value="@_filteredEmail"
+                               @oninput="OnEmailChanged"
+                               autofocus/>
+                    </div>
+                }
+            </div>
+
+            <!-- Status Pill -->
+            <div style="position: relative;">
+                <button class="filter-pill @(_selectedStatus != "All" ? "active-blue" : "")" @onclick="ToggleStatusDropdown">
+                    @if (_selectedStatus != "All")
+                    {
+                        <span>Status: @_selectedStatus</span>
+                    }
+                    else
+                    {
+                        <span>Status</span>
+                    }
+                    <span class="text-xs @(_selectedStatus != "All" ? "text-blue-300" : "text-gray-400")">▼</span>
+                </button>
+
+                @if (_statusDropdownOpen)
+                {
+                    <div class="pill-dropdown">
+                        <button class="dropdown-item @(_selectedStatus == "All" ? "selected" : "")" @onclick='() => SelectStatus("All")'>All</button>
+                        <button class="dropdown-item @(_selectedStatus == "Active" ? "selected" : "")" @onclick='() => SelectStatus("Active")'>Active</button>
+                        <button class="dropdown-item @(_selectedStatus == "Inactive" ? "selected" : "")" @onclick='() => SelectStatus("Inactive")'>Inactive</button>
+                        <button class="dropdown-item @(_selectedStatus == "Archived" ? "selected" : "")" @onclick='() => SelectStatus("Archived")'>Archived</button>
+                    </div>
+                }
+            </div>
+
+            <!-- Export CSV Button (Right Aligned) -->
+            <button class="filter-pill" style="margin-left: auto;" @onclick="ExportToCsvAsync">
+                <span>Export to CSV</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ml-1">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Users Table (Ag-Grid) -->
+    @if (_isLoading)
+    {
+        <div class="text-center py-12">
+            <p class="text-gray-500">Loading users...</p>
+        </div>
+    }
+    else
+    {
+        <!-- Always render grid container -->
+        <div id="usersGrid" class="ag-theme-alpine" style="height: 600px; width: 100%;"></div>
+
+        <!-- Show empty state overlay if no results -->
+        @if (_pagedUsers == null || !_pagedUsers.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-state-icon">👥</div>
+                <p class="empty-state-text">No users found</p>
+                <p class="text-sm text-gray-400 mt-2">Try adjusting your search or filters</p>
+            </div>
+        }
+
+        <!-- Pagination -->
+        <div class="mt-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <!-- Records Info -->
+            <div class="text-sm text-gray-700">
+                Showing @_startRecord-@_endRecord of @_totalRecords records
+            </div>
+
+            <div class="flex items-center gap-4">
+                <!-- Page Size Selector -->
+                <div class="flex items-center gap-2">
+                    <label class="text-sm text-gray-700">Records per page:</label>
+                    <select class="px-3 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                            @bind="_pageSize"
+                            @bind:after="OnPageSizeChangedAsync">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
+
+                <!-- Previous/Next Buttons -->
+                <div class="flex gap-2 items-center">
+                    <button
+                        class="px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        @onclick="PreviousPageAsync" disabled="@(_currentPage == 1)">
+                        Previous
+                    </button>
+
+                    <span class="text-sm text-gray-700 font-medium px-2">
+                        Page @_currentPage of @_totalPages
+                    </span>
+
+                    <button
+                        class="px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        @onclick="NextPageAsync" disabled="@(_currentPage >= _totalPages)">
+                        Next
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
