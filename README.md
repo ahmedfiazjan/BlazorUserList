@@ -1,5 +1,7 @@
 # Blazor User List
 
+![UserList](image-1.png)
+
 ## How to Run
 1. **Navigate** to the project directory:
    ```bash
