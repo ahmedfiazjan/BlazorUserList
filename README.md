@@ -33,3 +33,5 @@
 With more time, I would refactor the following:
 1.  **Reusable Data Grid Component**: Abstract the specific Ag-Grid implementation into a generic `<AgDataGrid Columns="..." Data="..." />` component to be used across the entire app. This way I would have injected it into the user component and that would have made stuff even more clean. 
 2.  **Componentized Filter Pills**: Extract the filter pill logic (dropdown handling, active states) into a reusable `<FilterPill>` component to declutter the main page logic.
+
+## Also, I deployed this app to Netlify. You can check it out (https://blazoruserlist.netlify.app/).
